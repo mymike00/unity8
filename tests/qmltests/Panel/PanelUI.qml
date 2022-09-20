@@ -131,12 +131,13 @@ PanelTest {
                         // x: (parent.width - width) / 2
                         // x: (parent.width - width) / 2
                         color: UbuntuColors.red
-                        visible: false
+                        visible: true
                         // opacity: 0.5
-                        property real y1: y + height / 2
+                        property real y1: y / 2
                         // property real relX: x + width //x-panel.listView.x + width
                         property real relX: x-panel.listView.x + width
-                        property real relY1: y1-panel.listView.y
+                        property real relY1: y1 - panel.listView.y
+                        property real span: units.gu(0.5)
                         // onXChanged: {
                         //     // console.log(x)
                         //     update()
@@ -144,50 +145,56 @@ PanelTest {
                         // onWidthChanged: update()
                         Component.onCompleted: update()
                         function update() {
-                            console.log(relX, relY1)
-                            console.log("updating notch")
-                            // var i = panel.indicators.indicatorAt(relX, relY1)
-                            var i = panel.indicators.indicatorAt(relX, 0)
-                            var objName = i.objectName.split("-panelItem")[0]
-                            console.log("indicator at right "+objName)
-                            var index = getIndicatorIndexFromIdentifier(objName)
-                            console.log("indicator index at right "+index)
+                            console.log("updating notch", relX, relY1)
+                            console.log("listview width", panel.listView.width, "x", panel.listView.x)
+                            console.log("panel width", panel.width, "x", panel.x)
+                            var hiddenIndicator = panel.indicators.indicatorAt(relX, relY1)
+                            // var hiddenIndicator = panel.indicators.indicatorAt(relX, 0)
+                            if (hiddenIndicator == null) {
+                                console.log("No indicator covered by the notch")
+                                return
+                            }
+                            var hiddenIndicatorName = hiddenIndicator.objectName.split("-panelItem")[0]
+                            console.log("indicator at right "+hiddenIndicatorName)
+                            var hiddenIndicatorIndex = getIndicatorIndexFromIdentifier(hiddenIndicatorName)
+                            // console.log("indicator index at right "+hiddenIndicatorIndex)
 
                             var p
-                            panel.indicators.setCurrentItemIndex(index + 1)
+                            panel.indicators.setCurrentItemIndex(hiddenIndicatorIndex + 1)
+                            console.log("right indicator undefined", panel.listView.currentItem == undefined)
                             // item to the right of the notch
-                            var t_str = panel.listView.currentItem
+                            var t_str = panel.listView.currentItem.objectName.split("-panelItem")[0]
                             console.log("new current item (t)", t_str)
-                            var t_index = getIndicatorIndexFromIdentifier(t_str.objectName.split("-panelItem")[0])
-                            var t = panel.listView.children[t_index]
-                            console.log("t", t_index, t)
+                            var rightIndicatorIndex = getIndicatorIndexFromIdentifier(t_str)
+                            console.log("index of indicator at the notch right", rightIndicatorIndex)
 
-                            var tX = panel.indicators.getCurrentItemX()
+                            var rightIndicatorX = panel.listView.currentItem != undefined ? panel.indicators.getCurrentItemX() //panel.listView.currentItem.x
+                                                                                          : panel.listView.x + panel.listView.width
+                            console.log("rightIndicatorX", rightIndicatorX)
 
                             //// x coords at the right of the item t
                             // var p = t.x + t.width
                             // x coords at the left of the item t
-                            p = panel.listView.currentItem != undefined ? tX : panel.listView.x + panel.listView.width
-                            console.log("p", panel.listView.currentItem != undefined, tX, ":", panel.listView.x +"+"+ panel.listView.width)
-                            panel.indicators.setCurrentItemIndex(index - 1)
-                            // console.log("element index at right of the notch: "+i)
+                            console.log("listView x:", panel.listView.x, "listView width:", panel.listView.width)
+                            panel.indicators.setCurrentItemIndex(hiddenIndicatorIndex - 1)
+                            // console.log("element index at right of the notch: "+hiddenIndicator)
 
                             var notchIndex = getIndicatorIndexFromIdentifier("notch")
                             console.log("notch index: " + notchIndex)
-                            if (notchIndex === index) {
+                            if (notchIndex === hiddenIndicatorIndex) {
                                 if (panel.listView.currentItem != undefined) {
                                     // console.log(p, relX, panel.listView.currentItem.width)
                                     if(p - relX > panel.listView.currentItem.width)
-                                        moveNotch(index-1)
+                                        moveNotch(hiddenIndicatorIndex - 1)
                                 }
-                                console.log("P: ", p,"X: ", relX, "w: ", width)
-                                panel.notchW = p - relX + width
                             }
-                            else if (i != "") {
-                                moveNotch(index)
-                                panel.notchW = width
+                            // else if (hiddenIndicator != "") {
+                            else {
+                                moveNotch(hiddenIndicatorIndex)
                             }
-                            console.log(panel.notchW)
+                            console.log("panel/listView delta:", -Math.max(panel.listView.width - panel.width, 0))
+                            panel.notchW = rightIndicatorX - Math.max(panel.listView.width - panel.width, 0) - relX + width + span
+                            console.log("notch width", panel.notchW, "\n")
                         }
                     }
                 }
@@ -198,18 +205,18 @@ PanelTest {
             Layout.alignment: Qt.AlignTop
             Layout.fillWidth: false
 
-            // ListItem.ItemSelector {
-            //     id: modeSelector
-            //     Layout.fillWidth: true
-            //     activeFocusOnPress: false
-            //     text: "Mode"
-            //     model: ["staged", "windowed" ]
-            //     onSelectedIndexChanged: {
-            //         panel.mode = model[selectedIndex];
-            //         keyboardAttached.checked = panel.mode == "windowed"
-            //         windowControlsCB.checked = panel.mode == "windowed"
-            //     }
-            // }
+            ListItem.ItemSelector {
+                id: modeSelector
+                Layout.fillWidth: true
+                activeFocusOnPress: false
+                text: "Mode"
+                model: ["staged", "windowed" ]
+                onSelectedIndexChanged: {
+                    panel.mode = model[selectedIndex];
+                    keyboardAttached.checked = panel.mode == "windowed"
+                    windowControlsCB.checked = panel.mode == "windowed"
+                }
+            }
 
             Button {
                 id: nButton
